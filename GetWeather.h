@@ -21,71 +21,64 @@
 #include <vector>
 #include <functional>
 
-struct TheWeather
+
+/**
+ * @brief This data contains the current state of the weather for the time.
+ * It is used for the current weather and the hourley forcast weather for the same day as current.
+ */
+struct WeatherData
 {
-	double mLatitude;		//!< Geographical coordinates of the location (latitude)
-	double mLongitude;		//!< Geographical coordinates of the location (longitude)
-	std::string mTimeZone;	//!< timezone Timezone name for the requested location
-	uint32_t mTimezoneOffset;	//!< timezone_offset Shift in seconds from UTC
+	uint64_t mTime;				//!< Current time, Unix, UTC
+	uint64_t mSunrise;			//!< Sunrise time, Unix, UTC
+	uint64_t mSunset;			//!< Sunset time, Unix, UTC
+	float mTemperature;			//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
+	float mFeelsLike;			//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	uint32_t mPressure;			//!< Atmospheric pressure on the sea level, hPa
+	uint32_t mHumidity;			//!< Humidity, %
+	float mDewPoint;			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	uint32_t mClouds;			//!< Cloudiness, %
+	uint32_t mUVIndex;			//!< Current UV index
+	uint32_t mVisibility;		//!< Average visibility, metres
+	float mWindSpeed;			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	float mWindGusts;			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	uint32_t mWindDirection;	//!< Wind direction, degrees (meteorological)
+	uint32_t mRainVolume;		//!< (where available) Rain volume for last hour, mm
+	uint32_t mSnowVolume;		//!< (where available) Snow volume for last hour, mm
 	struct
 	{
-		uint64_t mTime;				//!< Current time, Unix, UTC
-		uint64_t mSunrise;			//!< Sunrise time, Unix, UTC
-		uint64_t mSunset;			//!< Sunset time, Unix, UTC
-		float mTemperature;			//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-		float mFeelsLike;			//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-		uint32_t mPressure;			//!< Atmospheric pressure on the sea level, hPa
-		uint32_t mHumidity;			//!< Humidity, %
-		float mDewPoint;			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-		uint32_t mClouds;			//!< Cloudiness, %
-		uint32_t mUVIndex;			//!< Current UV index
-		uint32_t mVisibility;		//!< Average visibility, metres
-		float mWindSpeed;			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-		float mWindGusts;			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-		uint32_t mWindDirection;	//!< Wind direction, degrees (meteorological)
-		uint32_t mRainVolume;		//!< (where available) Rain volume for last hour, mm
-		uint32_t mSnowVolume;		//!< (where available) Snow volume for last hour, mm
-		struct
-		{
-			uint32_t mID;				//!< Weather condition id
-			std::string mTitle;			//!< Group of weather parameters (Rain, Snow, Extreme etc.)
-			std::string mDescription;	//!< Weather condition within the group (full list of weather conditions). Get the output in your language
-			std::string mIcon;			//!< Weather icon id. How to get icons
-		}mWeather;
-	}mCurrent; //<! Current weather data API response
+		uint32_t mID;				//!< Weather condition id
+		std::string mTitle;			//!< Group of weather parameters (Rain, Snow, Extreme etc.)
+		std::string mDescription;	//!< Weather condition within the group (full list of weather conditions). Get the output in your language
+		std::string mIcon;			//!< Weather icon id. How to get icons
+	}mWeather;
+};
 
-	std::vector<struct
-	{
-		uint64_t mTime;
-		uint32_t mPrecipitation;
-	}>mMinutely;
+/**
+ * @brief The weather data for a miniute interval. 
+ * Included as in tests was sent, but only had the time and expected rain volume. A bit odd?
+ */
+struct MinutelyForecast
+{
+	uint64_t mTime; //!< Time of the forecasted data, unix, UTC
+	uint32_t mPrecipitation; //!< Precipitation volume, mm
+};
 
-	//!< minutely Minute forecast weather data API response
-	//!< minutely.dt Time of the forecasted data, unix, UTC
-	//!< minutely.precipitation Precipitation volume, mm
-	//!< hourly Hourly forecast weather data API response
-	//!< hourly.dt Time of the forecasted data, Unix, UTC
-	//!< hourly.temp Temperature. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-	//!< hourly.feels_like Temperature. This accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-	//!< hourly.pressure Atmospheric pressure on the sea level, hPa
-	//!< hourly.humidity Humidity, %
-	//!< hourly.dew_point Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-	//!< hourly.uvi UV index
-	//!< hourly.clouds Cloudiness, %
-	//!< hourly.visibility Average visibility, metres
-	//!< hourly.wind_speed Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour.How to change units used
-	//!< hourly.wind_gust (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-	//!< chourly.wind_deg Wind direction, degrees (meteorological)
-	//!< hourly.pop Probability of precipitation
-	//!< hourly.rain
-	//!< hourly.rain.1h (where available) Rain volume for last hour, mm
-	//!< hourly.snow
-	//!< hourly.snow.1h (where available) Snow volume for last hour, mm
-	//!< hourly.weather
-	//!< hourly.weather.id Weather condition id
-	//!< hourly.weather.main Group of weather parameters (Rain, Snow, Extreme etc.)
-	//!< hourly.weather.description Weather condition within the group (full list of weather conditions). Get the output in your language
-	//!< hourly.weather.icon Weather icon id. How to get icons
+/**
+ * @brief Contains all the weather information downloaded.
+ * 
+ */
+struct TheWeather
+{
+	double mLatitude;			//!< Geographical coordinates of the location (latitude)
+	double mLongitude;			//!< Geographical coordinates of the location (longitude)
+	std::string mTimeZone;		//!< timezone Timezone name for the requested location
+	uint32_t mTimezoneOffset;	//!< timezone_offset Shift in seconds from UTC
+	WeatherData mCurrent; 		//<! Current weather data API response
+
+	std::vector<MinutelyForecast>mMinutely; //!< Minute forecast weather data API response
+	std::vector<WeatherData>mHourly; //!< Hourly forecast weather data API response
+
+
 	//!< daily Daily forecast weather data API response
 	//!< daily.dt Time of the forecasted data, Unix, UTC
 	//!< daily.sunrise Sunrise time, Unix, UTC
@@ -131,17 +124,19 @@ struct TheWeather
  * uses OpenWeather one-call-api https://openweathermap.org/api/one-call-api
  * You will need to make a free account and get an API key
  */
-class OpenWeather
+class GetWeather
 {
 public:
-	OpenWeather(const std::string& pAPIKey);
-	~OpenWeather();
+	GetWeather(const std::string& pAPIKey);
+	~GetWeather();
 
 	void Get(double pLatitude,double pLongitude,std::function<void(const TheWeather& pWeather)> pReturnFunction);
 
 private:
 
 	const std::string mAPIKey;
+
+	bool DownloadWeatherReport(const std::string& pURL,std::string& rJson)const;
 
 };
 	
