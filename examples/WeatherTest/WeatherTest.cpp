@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     myWeather.Get(50.72824,-1.15244,[](const TheWeather &pTheWeather)
     {
-
+        std::cout << pTheWeather.mCurrent.mWeather.mDescription << '\n';
     });
 
 // And quit;

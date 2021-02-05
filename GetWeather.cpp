@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <assert.h>
 
 #include <stdio.h>
 #include <curl/curl.h>
@@ -46,6 +47,8 @@ GetWeather::~GetWeather()
 
 void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const TheWeather& pWeather)> pReturnFunction)
 { 
+	assert( pReturnFunction != nullptr );
+
 	std::string jsonData;
 	std::stringstream url;
 	url << "http://api.openweathermap.org/data/2.5/onecall?";
@@ -59,8 +62,38 @@ void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const
 		// I would have used rapid json but that is a lot of files to add to this project.
 		// My intention is for someone to beable to drop these two files into their project and continue.
 		// And so I will make my own json reader, it's easy but not the best solution.
-		tinyjson::JsonProcessor theWeather(jsonData);
+		tinyjson::JsonProcessor jsonWeather(jsonData);
 
+		TheWeather weatherData;
+
+		// Lets build up the weather data.
+		weatherData.mCurrent.mTime = jsonWeather["current"]["dt"].GetUnsigned64Int();				//!< Current time, Unix, UTC
+		weatherData.mCurrent.mSunrise = jsonWeather["current"]["sunrise"].GetUnsigned64Int();		//!< Sunrise time, Unix, UTC
+		weatherData.mCurrent.mSunset = jsonWeather["current"]["sunset"].GetUnsigned64Int();			//!< Sunset time, Unix, UTC
+		weatherData.mCurrent.mTemperature = jsonWeather["current"]["temp"].GetFloat();				//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
+		weatherData.mCurrent.mFeelsLike = jsonWeather["current"]["feels_like"].GetFloat();			//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+		weatherData.mCurrent.mPressure = jsonWeather["current"]["pressure"].GetUnsigned64Int();		//!< Atmospheric pressure on the sea level, hPa
+		weatherData.mCurrent.mHumidity = jsonWeather["current"]["humidity"].GetUnsigned64Int();		//!< Humidity, %
+		weatherData.mCurrent.mDewPoint = jsonWeather["current"]["dew_point"].GetFloat();				//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+		weatherData.mCurrent.mClouds = jsonWeather["current"]["clouds"].GetUnsigned32Int();			//!< Cloudiness, %
+		weatherData.mCurrent.mUVIndex = jsonWeather["current"]["uvi"].GetUnsigned32Int();			//!< Current UV index
+		weatherData.mCurrent.mVisibility = jsonWeather["current"]["visibility"].GetUnsigned32Int();	//!< Average visibility, metres
+		weatherData.mCurrent.mWindSpeed = jsonWeather["current"]["wind_speed"].GetFloat();			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+		weatherData.mCurrent.mWindGusts = jsonWeather["current"]["wind_deg"].GetFloat();				//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+		weatherData.mCurrent.mWindDirection = 0;
+		weatherData.mCurrent.mRainVolume = 0;
+		weatherData.mCurrent.mSnowVolume = 0;
+
+		if( jsonWeather["current"].GetHasKeyValue("weather") && jsonWeather["current"]["weather"].GetArraySize() > 0 )
+		{
+			weatherData.mCurrent.mWeather.mID = jsonWeather["current"]["weather"][0]["id"].GetUnsigned32Int();
+			weatherData.mCurrent.mWeather.mTitle = jsonWeather["current"]["weather"][0]["main"].GetString();
+			weatherData.mCurrent.mWeather.mDescription = jsonWeather["current"]["weather"][0]["description"].GetString();
+			weatherData.mCurrent.mWeather.mIcon = jsonWeather["current"]["weather"][0]["icon"].GetString();
+		}
+
+
+		pReturnFunction(weatherData);
 	}
 }
 
