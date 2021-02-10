@@ -42,8 +42,6 @@ struct WeatherData
 	float mWindSpeed;			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
 	float mWindGusts;			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
 	uint32_t mWindDirection;	//!< Wind direction, degrees (meteorological)
-	uint32_t mRainVolume;		//!< (where available) Rain volume for last hour, mm
-	uint32_t mSnowVolume;		//!< (where available) Snow volume for last hour, mm
 	struct
 	{
 		uint32_t mID;				//!< Weather condition id

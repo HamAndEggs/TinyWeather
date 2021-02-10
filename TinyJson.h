@@ -12,7 +12,11 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  
+   
+   Original code base is at https://github.com/HamAndEggs/TinyJson
+   
+   */
 
 #ifndef TINY_JSON_H
 #define TINY_JSON_H
@@ -33,16 +37,42 @@ namespace tinyjson{ // Using a namespace to try to prevent name clashes as my cl
  * @brief Different types of json value.
  * 
  */
+#define JSON_TYPES                    \
+    DEF_TYPE(JTYPE_STRING,"String")   \
+    DEF_TYPE(JTYPE_NUMBER,"Number")   \
+    DEF_TYPE(JTYPE_OBJECT,"Object")   \
+    DEF_TYPE(JTYPE_ARRAY,"Array")     \
+    DEF_TYPE(JTYPE_BOOLEAN,"Boolean") \
+    DEF_TYPE(JTYPE_NULL,"NULL")
+    
 enum JsonValueType
 {
-	JTYPE_STRING,
-	JTYPE_NUMBER,
-	JTYPE_OBJECT,
-	JTYPE_ARRAY,
-	JTYPE_TRUE,
-	JTYPE_FALSE,
-	JTYPE_NULL
+    JTYPE_INVALID,
+#define DEF_TYPE(JSON_ENUM__,JSON_NAME__) JSON_ENUM__,
+    JSON_TYPES
+#undef DEF_TYPE
 };
+
+/**
+ * @brief Fetches the string human readable name for a just type.
+ * 
+ * @param pType 
+ * @return std::string 
+ */
+inline std::string JsonValueTypeToString(JsonValueType pType)
+{
+    switch(pType)
+    {
+#define DEF_TYPE(JSON_ENUM__,JSON_NAME__) case JSON_ENUM__:return JSON_NAME__;
+    JSON_TYPES
+#undef DEF_TYPE
+    case JTYPE_INVALID:
+        throw std::runtime_error("JsonValueTypeToString passed an uninitialized type value");    
+        break;
+    };
+    throw std::runtime_error("JsonValueTypeToString passed an unknown type value");    
+    return "unknown json type";
+}
 
 /**
  * @brief This represents the core data structure that drives Json.
@@ -50,8 +80,17 @@ enum JsonValueType
  */
 struct JsonValue
 {
+    JsonValue():mType(JTYPE_INVALID),mBoolean(false)
+    {}
 	JsonValueType mType;
-	
+
+    /**
+     * @brief This holds the true or false value if the json value is TRUE or FALSE
+     * The json spec defines types, one for false and one for true. That is daft.
+     * So I define a boolean type and set my type to JTYPE_BOOLEAN and store the value.
+     */
+    bool mBoolean;
+
 	/**
 	 * @brief I hold all number values as a string, this is because until the user asks I do not know what type they want it as.
 	 * I also put the strings in here.
@@ -77,20 +116,33 @@ struct JsonValue
      */
     const JsonValue& operator [](const std::string& pKey)const
     {
-        assert( mType == JTYPE_OBJECT );
+        AssertType(JTYPE_OBJECT);
         const auto found = mObject.find(pKey);
         if( found != mObject.end() )
             return found->second;
         throw std::runtime_error("Json value for key " + pKey + " not found");
     }
 
+    /**
+     * @brief All0ws you to access the array type with an index and not have to add a ".Array"
+     * This means MyJson["songs"][10]["name"].GetString() is possible.
+     * @param pIndex 
+     * @return const JsonValue& 
+     */
     const JsonValue& operator [](size_t pIndex)const
     {
-        assert( mType == JTYPE_ARRAY );
+        AssertType(JTYPE_ARRAY);
         return mArray[pIndex];
     }
 
-    bool GetHasKeyValue(const std::string& pKey)const
+    /**
+     * @brief Checks that the key passed in exists without throwing an exception.
+     * If you do MyJson["scores"][10].GetInt() and "scores" was not in the root the code will throw an exception.
+     * @param pKey 
+     * @return true 
+     * @return false 
+     */
+    bool HasValue(const std::string& pKey)const
     {
         if( mType == JTYPE_OBJECT )
         {
@@ -102,6 +154,11 @@ struct JsonValue
         return false;
     }
 
+    /**
+     * @brief Fetches the size of the array, if the type is an array, else zero.
+     * 
+     * @return size_t 
+     */
     size_t GetArraySize()const
     {
         if( mType == JTYPE_ARRAY )
@@ -109,62 +166,157 @@ struct JsonValue
         return 0;
     }
 
+    /**
+     * @brief Gets the value as a string, if it is a string type.
+     * Else throws an exception.
+     * @return const std::string& 
+     */
     const std::string& GetString()const
     {
-        assert( mType == JTYPE_STRING );
+        AssertType(JTYPE_STRING);
         return mValue;
     }
 
+    /**
+     * @brief Gets the value as a double, if it is a number type.
+     * Else throws an exception.
+     * @return double 
+     */
     double GetDouble()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stod(mValue);
     }
 
+    /**
+     * @brief Gets the value as a float, if it is a number type.
+     * Else throws an exception.
+     * @return float 
+     */
     float GetFloat()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stof(mValue);
     }
 
+    /**
+     * @brief Gets the value as an int, if it is a number type.
+     * Else throws an exception.
+     * @return int 
+     */
     int GetInt()const
     {
-        return GetSigned32Int();
+        return GetInt32();
     }
 
-    uint64_t GetUnsigned64Int()const
+    /**
+     * @brief Gets the value as an uint64_t, if it is a number type.
+     * Else throws an exception.
+     * @return uint64_t 
+     */
+    uint64_t GetUInt64()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stoull(mValue);
     }
 
-    uint32_t GetUnsigned32Int()const
+    /**
+     * @brief Gets the value as an uint32_t, if it is a number type.
+     * Else throws an exception.
+     * @return uint32_t 
+     */
+    uint32_t GetUInt32()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stoul(mValue);
     }
 
-    int64_t GetSigned64Int()const
+    /**
+     * @brief Gets the value as an int64_t, if it is a number type.
+     * Else throws an exception.
+     * @return int64_t 
+     */
+    int64_t GetInt64()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stoll(mValue);
     }
 
-    int32_t GetSigned32Int()const
+    /**
+     * @brief Gets the value as an int32_t, if it is a number type.
+     * Else throws an exception.
+     * @return int32_t 
+     */
+    int32_t GetInt32()const
     {
-        assert( mType == JTYPE_NUMBER );
+        AssertType(JTYPE_NUMBER);
         return std::stol(mValue);
     }
 
+    /**
+     * @brief Gets the value as an boolean, if it is a boolean type.
+     * Else throws an exception.
+     * @return bool 
+     */
     bool GetBoolean()const
     {
-        assert( mType == JTYPE_TRUE || mType == JTYPE_FALSE );
-        return mType == JTYPE_TRUE;
+        AssertType(JTYPE_BOOLEAN);
+        return mBoolean;
     }
 
+    /**
+     * @brief Returns true if the type is a NULL.
+     * 
+     * @return true 
+     * @return false 
+     */
     bool GetIsNull()const
     {// We don't assert here as the false is an ok answer.
         return mType == JTYPE_NULL;
+    }
+
+    /***************************************************
+     * Following set of functions are more robust and allow you to supply a default if the key is missing or the expected type is wrong.
+     * But beware uses these, although convenient, will hide errors in code. These are best used when you do not have control over the
+     * Json being read.
+     * If it's one of your files that you generate it is best to use the ones above as they will warn you about errors in the data.
+     * 
+     * @brief These functions will return the value found if the key is present and the value type is correct, else will return the default.
+     * @param pKey The Key of the value to look for.
+     * @param pDefault The default value to use if there was a problem.
+     * @return
+     * 
+     ***************************************************/
+    #define MAKE_SAFE_FUNCTION(FUNC_NAME__,FUNC_TYPE__,DEFAULT_VALUE__)                             \
+    FUNC_TYPE__ FUNC_NAME__(const std::string& pKey,FUNC_TYPE__ pDefault = DEFAULT_VALUE__)const    \
+    {                                                                                               \
+        try{return (*this)[pKey].FUNC_NAME__();}                                                    \
+        catch( const std::runtime_error& ){}/* Ignore exception and return the default.*/           \
+        return pDefault;                                                                            \
+    }
+
+    MAKE_SAFE_FUNCTION(GetArraySize,size_t,0);
+    MAKE_SAFE_FUNCTION(GetString,const std::string&,"");
+    MAKE_SAFE_FUNCTION(GetDouble,double,0.0);
+    MAKE_SAFE_FUNCTION(GetFloat,float,0.0f);
+    MAKE_SAFE_FUNCTION(GetInt,int,0);
+    MAKE_SAFE_FUNCTION(GetUInt64,uint64_t,0);
+    MAKE_SAFE_FUNCTION(GetUInt32,uint32_t,0);
+    MAKE_SAFE_FUNCTION(GetInt64,int64_t,0);
+    MAKE_SAFE_FUNCTION(GetInt32,int32_t,0);
+    MAKE_SAFE_FUNCTION(GetBoolean,bool,false);
+    MAKE_SAFE_FUNCTION(GetIsNull,bool,false);
+
+    #undef MAKE_SAFE_FUNCTION
+
+
+private:
+    void AssertType(JsonValueType pType)const
+    {
+        if( mType != pType )
+        {
+            throw std::runtime_error("Json Type is not what is expected, the type is " + JsonValueTypeToString(mType) +" looking for " + JsonValueTypeToString(pType));
+        }
     }
 
 };
@@ -204,29 +356,13 @@ public:
     }
 
     /**
-     * @brief This is a handy overload that allows you to do ["key1"]["key2"]["key3"].GetInt() type of thing.
-     * throws std::runtime_error if key not found.
-     * @param pKey The key string that represents the value you want.
-     * @return const JsonValue& The value.
+     * @brief Get the Root object
+     * 
+     * @return const JsonValue& 
      */
-    const JsonValue& operator [](const std::string& pKey)const
+    const JsonValue& GetRoot()const
     {
-        const auto found = mRoot.mObject.find(pKey);
-        if( found != mRoot.mObject.end() )
-            return found->second;
-        throw std::runtime_error("Json value for key " + pKey + " not found in root object");
-    }
-
-    bool GetHasKeyValue(const std::string& pKey)const
-    {
-        if( mRoot.mType == JTYPE_OBJECT )
-        {
-            const auto found = mRoot.mObject.find(pKey);
-            if( found != mRoot.mObject.end() )
-                return true;
-        }
-
-        return false;
+        return mRoot;
     }
 
 private:
@@ -316,13 +452,14 @@ private:
             break;
 
         case '[':
+//            pNewValue.mArray = std::make_shared<std::vector<JsonValue>>();
+            pNewValue.mType = JTYPE_ARRAY;
             do
             {
                 mJson++;//skip ']' or the ','
-                pNewValue.mType = JTYPE_ARRAY;
-                JsonValue arrayValue;
-                MakeValue(arrayValue);
-                pNewValue.mArray.emplace_back(arrayValue);
+                // Looks odd, but is the easiest / optimal way to reduce memory reallocations using c++14 features.
+                pNewValue.mArray.resize(pNewValue.mArray.size()+1);
+                MakeValue(pNewValue.mArray.back());
                 SkipWhiteSpace();
             }while(*mJson == ',');
 
@@ -344,7 +481,8 @@ private:
             if( tolower(mJson[1]) == 'u' && tolower(mJson[1]) == 'r' && tolower(mJson[1]) == 'e' )
             {
                 mJson += 4;
-                pNewValue.mType = JTYPE_TRUE;
+                pNewValue.mType = JTYPE_BOOLEAN;
+                pNewValue.mBoolean = true;
             }
             else
             {
@@ -357,7 +495,8 @@ private:
             if( tolower(mJson[1]) == 'a' && tolower(mJson[1]) == 'l' && tolower(mJson[1]) == 's' && tolower(mJson[1]) == 'e' )
             {
                 mJson += 5;
-                pNewValue.mType = JTYPE_FALSE;
+                pNewValue.mType = JTYPE_BOOLEAN;
+                pNewValue.mBoolean = false;
             }
             else
             {
