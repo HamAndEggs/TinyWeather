@@ -38,6 +38,101 @@ static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerD
 	return size * nmemb;
 }
 
+static void ReadWeatherData(const tinyjson::JsonValue pJson,WeatherData& rWeather)
+{
+
+	rWeather.mTime = pJson.GetUInt64("dt");					//!< Current time, Unix, UTC
+	rWeather.mSunrise = pJson.GetUInt64("sunrise");			//!< Sunrise time, Unix, UTC
+	rWeather.mSunset = pJson.GetUInt64("sunset");				//!< Sunset time, Unix, UTC
+	rWeather.mTemperature.Set(pJson.GetFloat("temp"));			//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
+	rWeather.mFeelsLike.Set(pJson.GetFloat("feels_like"));		//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	rWeather.mPressure = pJson.GetUInt64("pressure");			//!< Atmospheric pressure on the sea level, hPa
+	rWeather.mHumidity = pJson.GetUInt64("humidity");			//!< Humidity, %
+	rWeather.mDewPoint = pJson.GetFloat("dew_point");			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	rWeather.mClouds = pJson.GetUInt32("clouds");				//!< Cloudiness, %
+	rWeather.mUVIndex = pJson.GetUInt32("uvi");				//!< Current UV index
+	rWeather.mVisibility = pJson.GetUInt32("visibility");		//!< Average visibility, metres
+	rWeather.mWindSpeed = pJson.GetFloat("wind_speed");		//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	rWeather.mWindGusts = pJson.GetFloat("wind_deg");			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	rWeather.mWindDirection = pJson.GetUInt32("wind_deg");	//!< Wind direction, degrees (meteorological)
+
+	if( pJson.GetArraySize("weather") > 0 )
+	{
+		const tinyjson::JsonValue& weather = pJson["weather"][0];
+		rWeather.mDisplay.mID = weather.GetUInt32("id");
+		rWeather.mDisplay.mTitle = weather.GetString("main");
+		rWeather.mDisplay.mDescription = weather.GetString("description");
+		rWeather.mDisplay.mIcon = weather.GetString("icon");
+	}
+}
+
+static void ReadDailyWeatherData(const tinyjson::JsonValue pJson,DailyWeatherData& rDaily)
+{
+
+	rDaily.mTime = pJson.GetUInt64("dt");					//!< Current time, Unix, UTC
+	rDaily.mSunrise = pJson.GetUInt64("sunrise");			//!< Sunrise time, Unix, UTC
+	rDaily.mSunset = pJson.GetUInt64("sunset");				//!< Sunset time, Unix, UTC
+	rDaily.mPressure = pJson.GetUInt64("pressure");			//!< Atmospheric pressure on the sea level, hPa
+	rDaily.mHumidity = pJson.GetUInt64("humidity");			//!< Humidity, %
+	rDaily.mDewPoint = pJson.GetFloat("dew_point");			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	rDaily.mClouds = pJson.GetUInt32("clouds");				//!< Cloudiness, %
+	rDaily.mUVIndex = pJson.GetUInt32("uvi");				//!< Current UV index
+
+	rDaily.mWindSpeed = pJson.GetFloat("wind_speed");		//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	rDaily.mWindGusts = pJson.GetFloat("wind_deg");			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	rDaily.mWindDirection = pJson.GetUInt32("wind_deg");	//!< Wind direction, degrees (meteorological)
+
+	rDaily.mPrecipitationProbability = pJson.GetFloat("prop");	//!< Probability of precipitation
+	rDaily.mRain = pJson.GetFloat("rain");						//!< (where available) Precipitation volume, mm
+	rDaily.mSnow = pJson.GetFloat("snow");						//!< (where available) Snow volume, mm
+
+	if( pJson.GetType("temp") == tinyjson::JTYPE_OBJECT  )
+	{
+		const tinyjson::JsonValue& temp = pJson["temp"];
+		rDaily.mTemperature.Set
+		(
+			temp.GetFloat("morn"),
+			temp.GetFloat("day"),
+			temp.GetFloat("eve"),
+			temp.GetFloat("night"),
+			temp.GetFloat("min"),
+			temp.GetFloat("max")
+		);
+	}
+	else if( pJson.GetType("temp") == tinyjson::JTYPE_NUMBER  )
+	{
+		rDaily.mTemperature.Set(pJson.GetFloat("temp"));
+	}
+
+	if( pJson.GetType("feels_like") == tinyjson::JTYPE_OBJECT  )
+	{
+		const tinyjson::JsonValue& feels_like = pJson["feels_like"];
+		rDaily.mFeelsLike.Set
+		(
+			feels_like.GetFloat("morn"),
+			feels_like.GetFloat("day"),
+			feels_like.GetFloat("eve"),
+			feels_like.GetFloat("night"),
+			feels_like.GetFloat("min"),
+			feels_like.GetFloat("max")
+		);
+	}
+	else if( pJson.GetType("feels_like") == tinyjson::JTYPE_NUMBER  )
+	{
+		rDaily.mFeelsLike.Set(pJson.GetFloat("feels_like"));
+	}
+
+	if( pJson.GetArraySize("weather") > 0 )
+	{
+		const tinyjson::JsonValue& weather = pJson["weather"][0];
+		rDaily.mDisplay.mID = weather.GetUInt32("id");
+		rDaily.mDisplay.mTitle = weather.GetString("main");
+		rDaily.mDisplay.mDescription = weather.GetString("description");
+		rDaily.mDisplay.mIcon = weather.GetString("icon");
+	}
+}
+
+
 GetWeather::GetWeather(const std::string& pAPIKey):mAPIKey(pAPIKey)
 {
 	curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -73,32 +168,30 @@ void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const
 		// Lets build up the weather data.
 		if( weather.HasValue("current") )
 		{
-			tinyjson::JsonValue current = weather["current"];
-			weatherData.mCurrent.mTime = current.GetUInt64("dt");					//!< Current time, Unix, UTC
-			weatherData.mCurrent.mSunrise = current.GetUInt64("sunrise");			//!< Sunrise time, Unix, UTC
-			weatherData.mCurrent.mSunset = current.GetUInt64("sunset");				//!< Sunset time, Unix, UTC
-			weatherData.mCurrent.mTemperature = current.GetFloat("temp");			//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-			weatherData.mCurrent.mFeelsLike = current.GetFloat("feels_like");		//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-			weatherData.mCurrent.mPressure = current.GetUInt64("pressure");			//!< Atmospheric pressure on the sea level, hPa
-			weatherData.mCurrent.mHumidity = current.GetUInt64("humidity");			//!< Humidity, %
-			weatherData.mCurrent.mDewPoint = current.GetFloat("dew_point");			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-			weatherData.mCurrent.mClouds = current.GetUInt32("clouds");				//!< Cloudiness, %
-			weatherData.mCurrent.mUVIndex = current.GetUInt32("uvi");				//!< Current UV index
-			weatherData.mCurrent.mVisibility = current.GetUInt32("visibility");		//!< Average visibility, metres
-			weatherData.mCurrent.mWindSpeed = current.GetFloat("wind_speed");		//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-			weatherData.mCurrent.mWindGusts = current.GetFloat("wind_deg");			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-			weatherData.mCurrent.mWindDirection = current.GetUInt32("wind_deg");	//!< Wind direction, degrees (meteorological)
+			ReadWeatherData(weather["current"],weatherData.mCurrent);
+		}
 
-			if( current.GetArraySize("weather") > 0 )
+		if( weather.GetArraySize("hourly") > 0 )
+		{
+			const tinyjson::JsonValue& hourly = weather["hourly"];
+			for( const auto& weather : hourly.mArray )
 			{
-				tinyjson::JsonValue weather = current["weather"][0];
-				weatherData.mCurrent.mWeather.mID = weather.GetUInt32("id");
-				weatherData.mCurrent.mWeather.mTitle = weather.GetString("main");
-				weatherData.mCurrent.mWeather.mDescription = weather.GetString("description");
-				weatherData.mCurrent.mWeather.mIcon = weather.GetString("icon");
+				// Looks odd, but is the easiest / optimal way to reduce memory reallocations using c++14 features.
+                weatherData.mHourly.resize(weatherData.mHourly.size()+1);
+				ReadWeatherData(weather,weatherData.mHourly.back());
 			}
 		}
 
+		if( weather.GetArraySize("daily") > 0 )
+		{
+			const tinyjson::JsonValue& daily = weather["daily"];
+			for( const auto& weather : daily.mArray )
+			{
+                weatherData.mDaily.resize(weatherData.mDaily.size()+1);
+				ReadDailyWeatherData(weather,weatherData.mDaily.back());
+			}
+
+		}
 
 		pReturnFunction(weatherData);
 	}

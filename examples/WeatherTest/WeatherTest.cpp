@@ -14,12 +14,23 @@ int main(int argc, char *argv[])
     std::cout << "Build date " << APP_BUILD_DATE << '\n';
     std::cout << "Build time " << APP_BUILD_TIME << '\n';
 
-//    GetWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
-    GetWeather myWeather("47af63a2c9fddca564b02d6ecf080e9d");
+    GetWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
 
     myWeather.Get(50.72824,-1.15244,[](const TheWeather &pTheWeather)
     {
-        std::cout << pTheWeather.mCurrent.mWeather.mDescription << '\n';
+        std::cout << "Today " << pTheWeather.mCurrent.mDisplay.mDescription << '\n';
+
+        std::cout << "Hourly\n";
+        for(size_t n = 0 ; n < 4 && n < pTheWeather.mHourly.size() ; n++ )
+        {
+            std::cout << "      " <<  pTheWeather.mHourly[n].mDisplay.mDescription << ' ' << pTheWeather.mHourly[n].mTemperature.Day.c << "C\n";
+        }
+
+        std::cout << "Tomorrow\n";
+        if( pTheWeather.mDaily.size() > 1 )
+        {
+            std::cout << "      " <<  pTheWeather.mDaily[1].mDisplay.mDescription << ' ' << pTheWeather.mDaily[1].mTemperature.Day.c << "C\n";
+        }
     });
 
 // And quit;

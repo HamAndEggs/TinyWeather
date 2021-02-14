@@ -21,6 +21,77 @@
 #include <vector>
 #include <functional>
 
+struct Temperature
+{
+	void Set(float pKelvin)
+	{
+		Morning.Set(pKelvin);
+		Day.Set(pKelvin);
+		Evening.Set(pKelvin);
+		Night.Set(pKelvin);
+
+		UpdateMinMax();
+	}
+
+	void Set(float pMorning,float pDay,float pEvening,float pNight,float pMin,float pMax)
+	{
+		Morning.Set(pMorning);
+		Day.Set(pDay);
+		Evening.Set(pEvening);
+		Night.Set(pNight);
+
+		if( pMin > 0.0f && pMax > 0.0f )
+		{
+			Min.Set(pMin);
+			Max.Set(pMax);
+		}
+		else
+		{
+			UpdateMinMax();
+		}
+	}
+
+	void UpdateMinMax()
+	{
+		float minK = Morning.k;
+		float maxK = Morning.k;
+
+		minK = std::min(minK,Day.k);
+		minK = std::min(minK,Evening.k);
+		minK = std::min(minK,Night.k);
+
+		maxK = std::max(minK,Day.k);
+		maxK = std::max(minK,Evening.k);
+		maxK = std::max(minK,Night.k);
+
+		Min.Set(minK);
+		Max.Set(maxK);
+	}
+
+	struct
+	{
+		float k;	// Kelvin
+		float c;	// Celsius
+		float f;	// Fahrenheit
+
+		void Set(float pKelvin)
+		{
+			k = pKelvin;
+			c = k - 273.15f;
+			f = k * 9.0f/5.0f - 459.670f;
+		}
+
+	}Morning,Day,Evening,Night,Min,Max;
+};
+
+struct DisplayData
+{
+	uint32_t mID;				//!< Weather condition id
+	std::string mTitle;			//!< Group of weather parameters (Rain, Snow, Extreme etc.)
+	std::string mDescription;	//!< Weather condition within the group (full list of weather conditions). Get the output in your language
+	std::string mIcon;			//!< Weather icon id. How to get icons
+};
+
 
 /**
  * @brief This data contains the current state of the weather for the time.
@@ -31,8 +102,8 @@ struct WeatherData
 	uint64_t mTime;				//!< Current time, Unix, UTC
 	uint64_t mSunrise;			//!< Sunrise time, Unix, UTC
 	uint64_t mSunset;			//!< Sunset time, Unix, UTC
-	float mTemperature;			//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-	float mFeelsLike;			//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	Temperature mTemperature;	//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
+	Temperature mFeelsLike;		//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
 	uint32_t mPressure;			//!< Atmospheric pressure on the sea level, hPa
 	uint32_t mHumidity;			//!< Humidity, %
 	float mDewPoint;			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
@@ -42,13 +113,32 @@ struct WeatherData
 	float mWindSpeed;			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
 	float mWindGusts;			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
 	uint32_t mWindDirection;	//!< Wind direction, degrees (meteorological)
-	struct
-	{
-		uint32_t mID;				//!< Weather condition id
-		std::string mTitle;			//!< Group of weather parameters (Rain, Snow, Extreme etc.)
-		std::string mDescription;	//!< Weather condition within the group (full list of weather conditions). Get the output in your language
-		std::string mIcon;			//!< Weather icon id. How to get icons
-	}mWeather;
+	DisplayData mDisplay;
+};
+
+struct DailyWeatherData
+{
+	
+	uint64_t mTime;				//!< Current time, Unix, UTC
+	uint64_t mSunrise;			//!< Sunrise time, Unix, UTC
+	uint64_t mSunset;			//!< Sunset time, Unix, UTC
+	Temperature mTemperature;	//!< Temperature. Units - default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
+	Temperature mFeelsLike;		//!< This temperature parameter accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+	uint32_t mPressure;			//!< Atmospheric pressure on the sea level, hPa
+	uint32_t mHumidity;			//!< Humidity, %
+	float mDewPoint;			//!< Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
+
+	uint32_t mClouds;			//!< Cloudiness, %
+	uint32_t mUVIndex;			//!< Current UV index
+
+	float mWindSpeed;			//!< Wind speed. Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	float mWindGusts;			//!< defaults to 0 if not found. (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
+	uint32_t mWindDirection;	//!< Wind direction, degrees (meteorological)
+
+	float mPrecipitationProbability;	//!< Probability of precipitation
+	float mRain;						//!< (where available) Precipitation volume, mm
+	float mSnow;						//!< (where available) Snow volume, mm
+	DisplayData mDisplay;
 };
 
 /**
@@ -74,41 +164,11 @@ struct TheWeather
 	WeatherData mCurrent; 		//<! Current weather data API response
 
 	std::vector<MinutelyForecast>mMinutely; //!< Minute forecast weather data API response
-	std::vector<WeatherData>mHourly; //!< Hourly forecast weather data API response
+	std::vector<WeatherData>mHourly;		//!< Hourly forecast weather data API response
+	std::vector<DailyWeatherData>mDaily;	//!< Daily forecast weather data API response
 
 
-	//!< daily Daily forecast weather data API response
-	//!< daily.dt Time of the forecasted data, Unix, UTC
-	//!< daily.sunrise Sunrise time, Unix, UTC
-	//!< daily.sunset Sunset time, Unix, UTC
-	//!< daily.temp Units – default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-	//!< daily.temp.morn Morning temperature.
-	//!< daily.temp.day Day temperature.
-	//!< daily.temp.eve Evening temperature.
-	//!< daily.temp.night Night temperature.
-	//!< daily.temp.min Min daily temperature.
-	//!< daily.temp.max Max daily temperature.
-	//!< daily.feels_like This accounts for the human perception of weather. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit. How to change units used
-	//!< daily.feels_like.morn Morning temperature.
-	//!< daily.feels_like.day Day temperature.
-	//!< daily.feels_like.eve Evening temperature.
-	//!< daily.feels_like.night Night temperature.
-	//!< daily.pressure Atmospheric pressure on the sea level, hPa
-	//!< daily.humidity Humidity, %
-	//!< daily.dew_point Atmospheric temperature (varying according to pressure and humidity) below which water droplets begin to condense and dew can form. Units – default: kelvin, metric: Celsius, imperial: Fahrenheit.
-	//!< daily.wind_speed Wind speed. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-	//!< daily.wind_gust (where available) Wind gust. Units – default: metre/sec, metric: metre/sec, imperial: miles/hour. How to change units used
-	//!< daily.wind_deg Wind direction, degrees (meteorological)
-	//!< daily.clouds Cloudiness, %
-	//!< daily.uvi The maximum value of UV index for the day
-	//!< daily.pop Probability of precipitation
-	//!< daily.rain (where available) Precipitation volume, mm
-	//!< daily.snow (where available) Snow volume, mm
-	//!< daily.weather
-	//!< daily.weather.id Weather condition id
-	//!< daily.weather.main Group of weather parameters (Rain, Snow, Extreme etc.)
-	//!< daily.weather.description Weather condition within the group (full list of weather conditions). Get the output in your language
-	//!< daily.weather.icon Weather icon id. How to get icons
+
 	//!< alerts National weather alerts data from major national weather warning systems
 	//!< alerts.sender_name Name of the alert source. Please read here the full list of alert sources
 	//!< alerts.event Alert event name
