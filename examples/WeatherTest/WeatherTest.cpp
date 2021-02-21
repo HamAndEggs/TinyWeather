@@ -16,21 +16,29 @@ int main(int argc, char *argv[])
 
     GetWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
 
-    myWeather.Get(50.72824,-1.15244,[](const TheWeather &pTheWeather)
+    myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const TheWeather &pTheWeather)
     {
-        std::cout << "Today " << pTheWeather.mCurrent.mDisplay.mDescription << '\n';
-
-        std::cout << "Hourly\n";
-        for(size_t n = 0 ; n < 4 && n < pTheWeather.mHourly.size() ; n++ )
+        if( pDownloadedOk )
         {
-            std::cout << "      " <<  pTheWeather.mHourly[n].mDisplay.mDescription << ' ' << pTheWeather.mHourly[n].mTemperature.Day.c << "C\n";
-        }
+            std::cout << "Today " << pTheWeather.mCurrent.mDisplay.mDescription << '\n';
 
-        std::cout << "Tomorrow\n";
-        if( pTheWeather.mDaily.size() > 1 )
-        {
-            std::cout << "      " <<  pTheWeather.mDaily[1].mDisplay.mDescription << ' ' << pTheWeather.mDaily[1].mTemperature.Day.c << "C\n";
+            std::cout << "Hourly\n";
+            for(size_t n = 0 ; n < 4 && n < pTheWeather.mHourly.size() ; n++ )
+            {
+                std::cout << "      " <<  pTheWeather.mHourly[n].mDisplay.mDescription << ' ' << pTheWeather.mHourly[n].mTemperature.Day.c << "C\n";
+            }
+
+            std::cout << "Tomorrow\n";
+            if( pTheWeather.mDaily.size() > 1 )
+            {
+                std::cout << "      " <<  pTheWeather.mDaily[1].mDisplay.mDescription << ' ' << pTheWeather.mDaily[1].mTemperature.Day.c << "C\n";
+            }
         }
+        else
+        {
+            std::cerr << "Failed to fetch weather, check you key, if it is new can take sometime to be usable.\n";
+        }
+        
     });
 
 // And quit;

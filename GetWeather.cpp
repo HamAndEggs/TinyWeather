@@ -143,9 +143,12 @@ GetWeather::~GetWeather()
 	curl_global_cleanup();
 }
 
-void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const TheWeather& pWeather)> pReturnFunction)
+void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(bool pDownloadedOk,const TheWeather& pWeather)> pReturnFunction)
 { 
 	assert( pReturnFunction != nullptr );
+
+	TheWeather weatherData;
+	bool downloadedOk = false;
 
 	std::string jsonData;
 	std::stringstream url;
@@ -163,16 +166,16 @@ void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const
 		tinyjson::JsonProcessor json(jsonData);
 		const tinyjson::JsonValue weather = json.GetRoot();
 
-		TheWeather weatherData;
-
 		// Lets build up the weather data.
 		if( weather.HasValue("current") )
 		{
+			downloadedOk = true;
 			ReadWeatherData(weather["current"],weatherData.mCurrent);
 		}
 
 		if( weather.GetArraySize("hourly") > 0 )
 		{
+			downloadedOk = true;
 			const tinyjson::JsonValue& hourly = weather["hourly"];
 			for( const auto& weather : hourly.mArray )
 			{
@@ -184,6 +187,7 @@ void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const
 
 		if( weather.GetArraySize("daily") > 0 )
 		{
+			downloadedOk = true;
 			const tinyjson::JsonValue& daily = weather["daily"];
 			for( const auto& weather : daily.mArray )
 			{
@@ -192,9 +196,10 @@ void GetWeather::Get(double pLatitude,double pLongitude,std::function<void(const
 			}
 
 		}
-
-		pReturnFunction(weatherData);
 	}
+
+	// Always return something. So they know if it failed or not.
+	pReturnFunction(downloadedOk,weatherData);
 }
 
 bool GetWeather::DownloadWeatherReport(const std::string& pURL,std::string& rJson)const
