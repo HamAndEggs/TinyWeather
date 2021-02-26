@@ -29,6 +29,12 @@ struct WeatherTime
 {
 	std::time_t mUTC;
 
+	WeatherTime() = default;
+	WeatherTime(std::time_t pUTC)
+	{
+		Set(pUTC);
+	}
+	
 	void Set(std::time_t pTime)
 	{
 		mUTC = pTime;
