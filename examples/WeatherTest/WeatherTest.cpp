@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <time.h>
 
 #include "GetWeather.h"
 
@@ -14,25 +15,43 @@ int main(int argc, char *argv[])
     std::cout << "Build date " << APP_BUILD_DATE << '\n';
     std::cout << "Build time " << APP_BUILD_TIME << '\n';
 
-    GetWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
+    getweather::TheWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
 
-    myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const TheWeather &pTheWeather)
+    myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const getweather::TheWeather &pTheWeather)
     {
         if( pDownloadedOk )
         {
             std::cout << "Today " << pTheWeather.mCurrent.mDisplay.mDescription << '\n';
 
             std::cout << "Hourly\n";
-            for(size_t n = 0 ; n < 4 && n < pTheWeather.mHourly.size() ; n++ )
+            for( const auto& w : pTheWeather.mHourly )
             {
-                std::cout << "      " <<  pTheWeather.mHourly[n].mDisplay.mDescription << ' ' << pTheWeather.mHourly[n].mTemperature.Day.c << "C\n";
+                std::cout   << "      "
+                            << w.mTime.GetDate() << ' ' << w.mTime.GetTime() << ' '
+                            << w.mDisplay.mDescription << ' '
+                            << w.mTemperature.c << "C\n";
             }
 
-            std::cout << "Tomorrow\n";
-            if( pTheWeather.mDaily.size() > 1 )
+            std::cout << "Next few days\n";
+            for( const auto& w : pTheWeather.mDaily )
             {
-                std::cout << "      " <<  pTheWeather.mDaily[1].mDisplay.mDescription << ' ' << pTheWeather.mDaily[1].mTemperature.Day.c << "C\n";
+                std::cout   << "      "
+                            << w.mTime.GetDate() << ' ' << w.mTime.GetTime() << ' '
+                            << w.mDisplay.mDescription << ' '
+                            << w.mTemperature.Day.c << "C\n";
             }
+
+            std::time_t result = std::time(nullptr);
+            result += (24*60*60);// Advance one day......
+
+            const auto* tomorrow = pTheWeather.GetHourlyForcast(result);
+
+            if( tomorrow )
+            {
+                std::cout   << "Tomorrow at " << tomorrow->mTime.GetDate() << " " << tomorrow->mTime.GetTime() << " Min " << tomorrow->mTemperature.c << "C\n";
+            }
+
+
         }
         else
         {
