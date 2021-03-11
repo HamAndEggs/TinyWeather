@@ -15,8 +15,7 @@ int main(int argc, char *argv[])
     std::cout << "Build date " << APP_BUILD_DATE << '\n';
     std::cout << "Build time " << APP_BUILD_TIME << '\n';
 
-//    getweather::TheWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
-    getweather::TheWeather myWeather("c015f40cb0d18e0256c12fcb70db6390");
+    getweather::TheWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
 
     myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const getweather::TheWeather &pTheWeather)
     {
@@ -52,7 +51,7 @@ int main(int argc, char *argv[])
                 std::cout << "Tomorrow at " << tomorrow->mTime.GetDate() << " " << tomorrow->mTime.GetTime() << " Min " << tomorrow->mTemperature.c << "C\n";
             }
 
-            const std::map<int,std::string> icons = pTheWeather.GetTodaysHourlyIconCodes(std::time(nullptr));
+            getweather::HourlyIconVector icons = pTheWeather.GetTodaysHourlyIconCodes(std::time(nullptr));
             for( auto& i : icons )
             {
                 std::cout << "[" << i.first << "," << i.second << "] ";
