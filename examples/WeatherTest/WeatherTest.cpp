@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
                 std::cout << "Tomorrow at " << tomorrow->mTime.GetDate() << " " << tomorrow->mTime.GetTime() << " Min " << tomorrow->mTemperature.c << "C\n";
             }
 
-            const std::map<int,std::string> icons = pTheWeather.GetHourlyIconCodes(std::time(nullptr));
+            const std::map<int,std::string> icons = pTheWeather.GetTodaysHourlyIconCodes(std::time(nullptr));
             for( auto& i : icons )
             {
                 std::cout << "[" << i.first << "," << i.second << "] ";
