@@ -2,7 +2,7 @@
 #include <iostream>
 #include <time.h>
 
-#include "GetWeather.h"
+#include "TinyWeather.h"
 
 int main(int argc, char *argv[])
 {
@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
     std::cout << "Build date " << APP_BUILD_DATE << '\n';
     std::cout << "Build time " << APP_BUILD_TIME << '\n';
 
-    getweather::TheWeather myWeather("__PUT_YOUR_APP_ID_HERE__");
+    tinyweather::OpenWeatherMap myWeather("__PUT_YOUR_APP_ID_HERE__");
 
-    myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const getweather::TheWeather &pTheWeather)
+    myWeather.Get(50.72824,-1.15244,[](bool pDownloadedOk,const tinyweather::OpenWeatherMap &pTheWeather)
     {
         if( pDownloadedOk )
         {
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
                 std::cout << "Tomorrow at " << tomorrow->mTime.GetDate() << " " << tomorrow->mTime.GetTime() << " Min " << tomorrow->mTemperature.c << "C\n";
             }
 
-            getweather::HourlyIconVector icons = pTheWeather.GetTodaysHourlyIconCodes(std::time(nullptr));
+            tinyweather::HourlyIconVector icons = pTheWeather.GetTodaysHourlyIconCodes(std::time(nullptr));
             for( auto& i : icons )
             {
                 std::cout << "[" << i.first << "," << i.second << "] ";

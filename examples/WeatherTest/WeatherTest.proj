@@ -1,7 +1,7 @@
 {
     "source_files": [
         "WeatherTest.cpp",
-        "../../GetWeather.cpp"
+        "../../TinyWeather.cpp"
     ],
 	"configurations":
     {
