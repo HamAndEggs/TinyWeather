@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cerr << "Failed to fetch weather, check you key, if it is new can take sometime to be usable.\n";
+            std::cerr << "Failed to fetch weather, check your key, if it is new can take sometime to be usable.\n";
         }
         
     });
